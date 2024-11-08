@@ -185,7 +185,7 @@ validate_configuration() {
 # Function to get client number and set hostname
 setup_hostname() {
     read -p "Enter client number (e.g., 1 for nixos-client-1): " client_num
-    new_hostname="nixos-client-1"
+    new_hostname="nixos-client-2"
     sed -i "s/networking.hostName = \"nixos-client\"/networking.hostName = \"$new_hostname\"/" /etc/nixos/configuration.nix
     echo "Hostname set to: $new_hostname"
 }
