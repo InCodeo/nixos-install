@@ -8,6 +8,25 @@ check_root() {
     fi
 }
 
+# Function to check network connectivity
+check_network() {
+    echo "Checking network connectivity..."
+    if ! ping -c 1 8.8.8.8 >/dev/null 2>&1; then
+        echo "Warning: No internet connectivity detected"
+        echo "Current network interfaces:"
+        ip a
+        echo "NetworkManager status:"
+        systemctl status NetworkManager
+        echo "Would you like to continue anyway? (y/n)"
+        read -p "> " -r continue_setup
+        if [ "$continue_setup" != "y" ]; then
+            exit 1
+        fi
+    else
+        echo "Network connectivity confirmed"
+    fi
+}
+
 # Function to backup existing configuration
 backup_configuration() {
     if [ -f "/etc/nixos/configuration.nix" ]; then
@@ -17,8 +36,25 @@ backup_configuration() {
     fi
 }
 
+# Function to detect system type
+detect_system_type() {
+    if dmidecode -s system-product-name | grep -qi "Surface"; then
+        echo "Surface device detected - adding specific drivers"
+        is_surface=true
+    elif systemd-detect-virt | grep -qi "microsoft"; then
+        echo "Hyper-V virtual machine detected - adding specific drivers"
+        is_hyperv=true
+    else
+        echo "Standard hardware configuration detected"
+        is_standard=true
+    fi
+}
+
 # Function to create configuration.nix
 create_configuration() {
+    echo "Creating configuration.nix..."
+    
+    # Start with base configuration
     cat > /etc/nixos/configuration.nix << 'EOL'
 { config, pkgs, ... }:
 
@@ -33,8 +69,16 @@ create_configuration() {
   boot.loader.efi.canTouchEfiVariables = true;
 
   # Networking
-  networking.hostName = "nixos-manager"; # Define your hostname.
-  networking.networkmanager.enable = true;
+  networking = {
+    hostName = "nixos-manager";
+    networkmanager = {
+      enable = true;
+      # Ensure WiFi is enabled
+      wifi.enabled = true;
+    };
+    # Fallback DNS servers
+    nameservers = [ "8.8.8.8" "1.1.1.1" ];
+  };
 
   # Time zone and locale settings
   time.timeZone = "Australia/Sydney";
@@ -54,14 +98,25 @@ create_configuration() {
     LC_TIME = "en_AU.UTF-8";
   };
 
-  # Console configuration
-  console = {
-    keyMap = "us";
-    packages = with pkgs; [ terminus_font ];
-    font = "${pkgs.terminus_font}/share/consolefonts/ter-v32n.psf.gz";
+  # Enable the X11 windowing system.
+  services.xserver = {
+    enable = true;
+    
+    # Enable the KDE Plasma Desktop Environment.
+    displayManager.sddm.enable = true;
+    desktopManager.plasma6.enable = true;
+    
+    # Configure keymap
+    xkb = {
+      layout = "us";
+      variant = "";
+    };
   };
 
-  # Enable sound with pipewire
+  # Enable CUPS to print documents.
+  services.printing.enable = true;
+
+  # Enable sound with pipewire.
   sound.enable = true;
   hardware.pulseaudio.enable = false;
   security.rtkit.enable = true;
@@ -81,6 +136,9 @@ create_configuration() {
     description = "Management Admin";
     extraGroups = [ "networkmanager" "wheel" ];
     initialPassword = "changeme";
+    packages = with pkgs; [
+      kdePackages.kate
+    ];
   };
 
   # Allow unfree packages
@@ -100,6 +158,11 @@ create_configuration() {
     curl
     pciutils
     usbutils
+    dmidecode
+    bind  # for dig/nslookup
+    inetutils  # for ping, etc.
+    ethtool
+    networkmanager
   ];
 
   # SSH Configuration
@@ -122,12 +185,37 @@ create_configuration() {
     # Allow incoming connections through Tailscale
     allowedUDPPorts = [ config.services.tailscale.port ];
   };
+EOL
+
+    # Add system-specific configurations
+    if [ "$is_surface" = true ]; then
+        cat >> /etc/nixos/configuration.nix << 'EOL'
+  # Surface-specific configuration
+  hardware.firmware = [ pkgs.linux-firmware ];
+  boot.kernelPackages = pkgs.linuxPackages_latest;
+  
+  # Enable touch and pen input
+  hardware.surface = {
+    enable = true;
+    firmware.enable = true;
+  };
+EOL
+    elif [ "$is_hyperv" = true ]; then
+        cat >> /etc/nixos/configuration.nix << 'EOL'
+  # Hyper-V specific configuration
+  virtualisation.hypervGuest.enable = true;
+  services.qemuGuest.enable = true;
+EOL
+    fi
+
+    # Add closing configuration
+    cat >> /etc/nixos/configuration.nix << 'EOL'
 
   system.stateVersion = "24.05";
 }
 EOL
 
-    echo "Created configuration.nix"
+    echo "Configuration created successfully"
 }
 
 # Function to validate configuration
@@ -136,7 +224,7 @@ validate_configuration() {
     if ! nixos-rebuild build; then
         echo "Error: Configuration validation failed"
         echo "Would you like to restore the backup? (y/n)"
-        read -r restore
+        read -p "> " -r restore
         if [ "$restore" = "y" ]; then
             if [ -f "$backup_file" ]; then
                 cp "$backup_file" /etc/nixos/configuration.nix
@@ -154,7 +242,7 @@ validate_configuration() {
 # Function to handle Tailscale setup
 setup_tailscale() {
     echo "Would you like to set up Tailscale now? (y/n)"
-    read -r setup_now
+    read -p "> " -r setup_now
     
     if [ "$setup_now" = "y" ]; then
         echo "Please paste your Tailscale auth key (from https://login.tailscale.com/admin/settings/keys):"
@@ -173,6 +261,29 @@ setup_tailscale() {
     fi
 }
 
+# Function to verify network after setup
+verify_network() {
+    echo "Verifying network configuration..."
+    
+    # Check NetworkManager status
+    if ! systemctl is-active NetworkManager >/dev/null 2>&1; then
+        echo "Warning: NetworkManager is not running"
+        systemctl start NetworkManager
+        sleep 5
+    fi
+    
+    # List available interfaces
+    echo "Available network interfaces:"
+    ip link show
+    
+    # Check for working DNS resolution
+    if ! nslookup google.com >/dev/null 2>&1; then
+        echo "Warning: DNS resolution is not working"
+        echo "Current resolv.conf contents:"
+        cat /etc/resolv.conf
+    fi
+}
+
 # Function to handle errors during rebuild
 handle_rebuild_error() {
     echo "Error during nixos-rebuild. Checking common issues..."
@@ -187,6 +298,9 @@ handle_rebuild_error() {
     echo "Updating nixpkgs channel..."
     nix-channel --update
     
+    # Verify network again
+    verify_network
+    
     # Try rebuilding with --show-trace for better error output
     echo "Attempting rebuild with --show-trace..."
     nixos-rebuild switch --show-trace
@@ -196,6 +310,12 @@ handle_rebuild_error() {
 main() {
     check_root
     echo "Starting NixOS manager node setup..."
+    
+    # Initial network check
+    check_network
+    
+    # Detect system type
+    detect_system_type
     
     # Backup existing configuration
     backup_configuration
@@ -214,6 +334,9 @@ main() {
     if ! nixos-rebuild switch; then
         handle_rebuild_error
     fi
+    
+    # Verify network configuration after rebuild
+    verify_network
     
     # Set up Tailscale connection if configured
     if [ -f "/etc/nixos/tailscale-auth.key" ]; then
@@ -255,10 +378,15 @@ main() {
     echo "   sed -i 's/PermitRootLogin \"yes\"/PermitRootLogin \"no\"/' /etc/nixos/configuration.nix"
     echo "   nixos-rebuild switch"
     echo ""
-    echo "4. If you experience any issues after reboot:"
-    echo "   - Check system logs: journalctl -xb"
-    echo "   - Verify hardware detection: lspci -v"
+    echo "4. Network Troubleshooting:"
+    echo "   - Check network interfaces: ip a"
+    echo "   - View NetworkManager status: systemctl status NetworkManager"
+    echo "   - Test DNS resolution: nslookup google.com"
     echo "   - Your original configuration was backed up to $backup_file"
+    echo ""
+    echo "5. If you experience graphics issues:"
+    echo "   - Check display manager: systemctl status display-manager"
+    echo "   - View Xorg logs: cat /var/log/Xorg.0.log"
 }
 
 main
