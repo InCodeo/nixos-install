@@ -73,11 +73,11 @@ create_configuration() {
     hostName = "nixos-manager";
     networkmanager = {
       enable = true;
-      # Ensure WiFi is enabled
-      wifi.enabled = true;
     };
     # Fallback DNS servers
     nameservers = [ "8.8.8.8" "1.1.1.1" ];
+    # Enable wireless support via wpa_supplicant
+    wireless.enable = false;  # Disable wpa_supplicant as we're using NetworkManager
   };
 
   # Time zone and locale settings
