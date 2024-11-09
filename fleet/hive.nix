@@ -132,6 +132,11 @@
     # Configure zsh
     programs.zsh = {
       enable = true;
+      ohMyZsh = {
+        enable = true;
+        plugins = [ "git" "docker" "sudo" ];
+        theme = "robbyrussell";
+      };
     };
 
     # SSH Configuration
