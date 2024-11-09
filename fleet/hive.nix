@@ -156,5 +156,23 @@
 
     # System version
     system.stateVersion = "24.05";
+
+    # Power management settings
+    powerManagement = {
+      enable = true;
+      powertop.enable = true;
+      cpuFreqGovernor = "performance";
+    };
+
+    # Disable sleep and hibernation
+    services.logind = {
+      lidSwitch = "ignore";
+      extraConfig = ''
+        HandleSuspendKey=ignore
+        HandleHibernateKey=ignore
+        HandleLidSwitch=ignore
+        IdleAction=ignore
+      '';
+    };
   };
 }
