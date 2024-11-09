@@ -134,23 +134,10 @@
       enable = true;
       shellInit = ''
         # Reload ZSH configuration
-        function zshreload() {
+        function zsource() {
             echo "🔄 Reloading ZSH configuration..."
             source ~/.zshrc
             echo "✅ Done"
-        }
-
-        # Client-specific update function
-        function clientup() {
-            echo "🔄 Updating client configuration..."
-            if cd "/etc/nixos" && git pull origin main; then
-                echo "🔨 Rebuilding client..."
-                sudo nixos-rebuild switch || { echo "❌ Build failed"; return 1; }
-                echo "✅ Done"
-            else
-                echo "❌ Git update failed"
-                return 1
-            fi
         }
 
         # Update all packages
