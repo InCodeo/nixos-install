@@ -122,6 +122,22 @@
       function hello() {
         echo "Hello, NixOS World!"
       }
+
+      # NixOS update function
+      function nixup() {
+        local repo_path="$HOME/.config/nixos"
+        echo "🔄 Updating NixOS configuration..."
+        
+        cd "$repo_path" || { echo "❌ Failed to change to repository directory"; return 1; }
+        
+        echo "📥 Pulling latest changes..."
+        git pull origin main || { echo "❌ Failed to pull changes"; return 1; }
+        
+        echo "🔨 Rebuilding NixOS..."
+        sudo nixos-rebuild switch || { echo "❌ Failed to rebuild NixOS"; return 1; }
+        
+        echo "✅ NixOS update complete!"
+      }
     '';
   };
 
