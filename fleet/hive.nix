@@ -127,6 +127,7 @@
 
     # Set zsh as default shell system-wide
     users.defaultUserShell = pkgs.zsh;
+    users.users.root.shell = pkgs.zsh;
     
     # Configure zsh
     programs.zsh = {
