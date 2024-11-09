@@ -132,9 +132,7 @@
     # Configure zsh
     programs.zsh = {
       enable = true;
-      shellInit = ''
-        echo "Hello, World!"
-      '';
+      shellInit = builtins.readFile ./client-functions.zsh;
     };
 
     # SSH Configuration
