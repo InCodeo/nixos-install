@@ -102,6 +102,7 @@
         kdePackages.kate
       ];
       initialPassword = "changeme";
+      shell = pkgs.zsh;  # Set zsh for homelab user
     };
 
     # Enable Firefox
@@ -121,7 +122,19 @@
       pciutils
       usbutils
       curl
+      zsh
     ];
+
+    # Set zsh as default shell system-wide
+    users.defaultUserShell = pkgs.zsh;
+    
+    # Configure zsh
+    programs.zsh = {
+      enable = true;
+      shellInit = ''
+        echo "Hello, World!"
+      '';
+    };
 
     # SSH Configuration
     services.openssh = {
