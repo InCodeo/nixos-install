@@ -123,6 +123,7 @@
       usbutils
       curl
       zsh
+      tilix  # Added Tilix terminal emulator
     ];
 
     # Set zsh as default shell system-wide
