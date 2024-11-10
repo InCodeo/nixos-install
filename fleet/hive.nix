@@ -165,12 +165,9 @@
       enable = true;
       powertop.enable = true;
       cpuFreqGovernor = "performance";
-      powerUpCommands = ''    # Added for WoL
-        ${pkgs.ethtool}/bin/ethtool -s enp0s13f0u1c2 wol g
-      '';
     };
 
-    # Add WoL service
+    # Modified WoL service with error handling
     systemd.services.enable-wol = {
       description = "Enable Wake-on-LAN for network interface";
       after = [ "network.target" ];
@@ -178,17 +175,22 @@
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
-        ExecStart = "${pkgs.ethtool}/bin/ethtool -s enp0s13f0u1c2 wol g";
+        # Add error handling to prevent service failure
+        ExecStart = "${pkgs.bash}/bin/bash -c '\
+          for interface in $(${pkgs.iproute2}/bin/ip link show | grep -v lo | awk -F: \'/^[0-9]+:/ {print $2}\' | tr -d \" \"); do \
+            ${pkgs.ethtool}/bin/ethtool -s $interface wol g || true; \
+          done'";
       };
     };
 
-    # Network interface configuration
-    networking.interfaces.enp0s13f0u1c2 = {
-      useDHCP = true;
-      wakeOnLan = {
-        enable = true;
-        policy = [ "magic" ];
-      };
+    # Network interface configuration - make it more generic
+    networking.interfaces = {
+      # Remove specific interface name and let NetworkManager handle it
+      # enp0s13f0u1c2 = {
+      #   useDHCP = true;
+      #   wakeOnLan.enable = true;
+      #   wakeOnLan.policy = [ "magic" ];
+      # };
     };
 
     # Disable sleep and hibernation
