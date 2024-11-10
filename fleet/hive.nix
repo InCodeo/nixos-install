@@ -37,7 +37,7 @@
       networkmanager.enable = true;
       firewall = {
         enable = true;
-        allowedTCPPorts = [ 22 ];
+        allowedTCPPorts = [ 22 9000 ];
         trustedInterfaces = [ "tailscale0" ];
         # Fixed the config reference for Tailscale
         allowedUDPPorts = [ 41641 ]; # Default Tailscale port
@@ -97,7 +97,7 @@
     users.users.homelab = {
       isNormalUser = true;
       description = "Home Lab User";
-      extraGroups = [ "networkmanager" "wheel" "audio" "video" ];
+      extraGroups = [ "networkmanager" "wheel" "audio" "video" "docker" ];
       packages = with pkgs; [
         kdePackages.kate
       ];
@@ -123,7 +123,8 @@
       usbutils
       curl
       zsh
-      tilix  # Added Tilix terminal emulator
+      tilix
+      docker-compose  # Added Docker Compose
     ];
 
     # Set zsh as default shell system-wide
@@ -175,5 +176,30 @@
         IdleAction=ignore
       '';
     };
+
+    # Enable Docker
+    virtualisation.docker = {
+      enable = true;
+      enableOnBoot = true;
+    };
+
+    # Add user to docker group
+    users.users.homelab.extraGroups = [ "networkmanager" "wheel" "audio" "video" "docker" ];  # Added docker group
+
+    # Portainer configuration
+    virtualisation.oci-containers.containers = {
+      portainer = {
+        image = "portainer/portainer-ce:latest";
+        ports = [ "9000:9000" ];
+        volumes = [
+          "/var/run/docker.sock:/var/run/docker.sock"
+          "portainer_data:/data"
+        ];
+        autoStart = true;
+      };
+    };
+
+    # Add Portainer port to firewall
+    networking.firewall.allowedTCPPorts = [ 22 9000 ];  # Added port 9000
   };
 }
