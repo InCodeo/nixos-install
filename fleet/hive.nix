@@ -195,8 +195,5 @@
         autoStart = true;
       };
     };
-
-    # Add Portainer port to firewall
-    networking.firewall.allowedTCPPorts = [ 22 9000 ];  # Added port 9000
   };
 }
