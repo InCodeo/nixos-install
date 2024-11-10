@@ -37,7 +37,7 @@
       networkmanager.enable = true;
       firewall = {
         enable = true;
-        allowedTCPPorts = [ 22 9000 ];
+        allowedTCPPorts = [ 22 9000 3151 ];
         trustedInterfaces = [ "tailscale0" ];
         # Fixed the config reference for Tailscale
         allowedUDPPorts = [ 41641 ]; # Default Tailscale port
@@ -202,6 +202,48 @@
         ];
         autoStart = true;
       };
+      
+      homepage = {
+        image = "ghcr.io/gethomepage/homepage:latest";
+        ports = [ "3151:3000" ];
+        environment = {
+          PUID = "1000";  # We'll need to adjust this to match your homelab user
+          PGID = "1000";  # Same here
+        };
+        volumes = [
+          "/var/lib/homepage/config:/app/config"
+          "/var/run/docker.sock:/var/run/docker.sock:ro"
+        ];
+        autoStart = true;
+      };
     };
+
+    # Homepage dashboard directory and config management
+    systemd.tmpfiles.rules = [
+      "d /var/lib/homepage 0755 root root -"
+      "d /var/lib/homepage/config 0755 root root -"
+    ];
+
+    environment.etc = {
+      "homepage/settings.yaml" = {
+        source = ./homepage/settings.yaml;
+        target = "/var/lib/homepage/config/settings.yaml";
+      };
+      "homepage/services.yaml" = {
+        source = ./homepage/services.yaml;
+        target = "/var/lib/homepage/config/services.yaml";
+      };
+      "homepage/widgets.yaml" = {
+        source = ./homepage/widgets.yaml;
+        target = "/var/lib/homepage/config/widgets.yaml";
+      };
+      "homepage/docker.yaml" = {
+        source = ./homepage/docker.yaml;
+        target = "/var/lib/homepage/config/docker.yaml";
+      };
+    };
+
+    # Don't forget to open the port in the firewall
+    # networking.firewall.allowedTCPPorts = [ 3151 ];
   };
 }
