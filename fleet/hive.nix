@@ -102,7 +102,7 @@
         kdePackages.kate
       ];
       initialPassword = "changeme";
-      shell = pkgs.zsh;  # Set zsh for homelab user
+      shell = pkgs.zsh;
     };
 
     # Enable Firefox
@@ -182,9 +182,6 @@
       enable = true;
       enableOnBoot = true;
     };
-
-    # Add user to docker group
-    users.users.homelab.extraGroups = [ "networkmanager" "wheel" "audio" "video" "docker" ];  # Added docker group
 
     # Portainer configuration
     virtualisation.oci-containers.containers = {
