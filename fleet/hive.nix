@@ -40,7 +40,7 @@
         allowedTCPPorts = [ 22 9000 3150 ];
         trustedInterfaces = [ "tailscale0" ];
         # Fixed the config reference for Tailscale
-        allowedUDPPorts = [ 41641 ]; # Default Tailscale port
+        allowedUDPPorts = [ 41641 9 ]; # Default Tailscale port and WoL magic packet
       };
     };
 
@@ -125,6 +125,7 @@
       zsh
       tilix
       docker-compose  # Added Docker Compose
+      ethtool    # Added for WoL support
     ];
 
     # Set zsh as default shell system-wide
@@ -164,6 +165,30 @@
       enable = true;
       powertop.enable = true;
       cpuFreqGovernor = "performance";
+      powerUpCommands = ''    # Added for WoL
+        ${pkgs.ethtool}/bin/ethtool -s enp0s13f0u1c2 wol g
+      '';
+    };
+
+    # Add WoL service
+    systemd.services.enable-wol = {
+      description = "Enable Wake-on-LAN for network interface";
+      after = [ "network.target" ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = "${pkgs.ethtool}/bin/ethtool -s enp0s13f0u1c2 wol g";
+      };
+    };
+
+    # Network interface configuration
+    networking.interfaces.enp0s13f0u1c2 = {
+      useDHCP = true;
+      wakeOnLan = {
+        enable = true;
+        policy = [ "magic" ];
+      };
     };
 
     # Disable sleep and hibernation
@@ -243,7 +268,5 @@
       };
     };
 
-    # Don't forget to open the port in the firewall
-    # networking.firewall.allowedTCPPorts = [ 3150 ];
   };
 }
