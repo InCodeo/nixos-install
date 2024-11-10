@@ -107,6 +107,7 @@
     networkmanager
     zsh
     oh-my-zsh
+    wakeonlan
   ];
 
   # ZSH Configuration
