@@ -177,6 +177,14 @@
       '';
     };
 
+    # Additional sleep prevention configuration
+    systemd.sleep.extraConfig = ''
+      AllowSuspend=no
+      AllowHibernation=no
+      AllowSuspendThenHibernate=no
+      AllowHybridSleep=no
+    '';
+
     # Enable Docker
     virtualisation.docker = {
       enable = true;
