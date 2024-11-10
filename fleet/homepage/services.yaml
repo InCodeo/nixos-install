@@ -1,1 +1,7 @@
- 
+---
+- name: Applications
+  icon: far fa-rocket
+  items:
+    - name: Portainer
+      icon: simple-icons:portainer
+      href: http://localhost:9000 W
