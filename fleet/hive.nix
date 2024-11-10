@@ -37,7 +37,7 @@
       networkmanager.enable = true;
       firewall = {
         enable = true;
-        allowedTCPPorts = [ 22 9000 3151 ];
+        allowedTCPPorts = [ 22 9000 3150 ];
         trustedInterfaces = [ "tailscale0" ];
         # Fixed the config reference for Tailscale
         allowedUDPPorts = [ 41641 ]; # Default Tailscale port
@@ -205,7 +205,7 @@
       
       homepage = {
         image = "ghcr.io/gethomepage/homepage:latest";
-        ports = [ "3151:3000" ];
+        ports = [ "3150:3000" ];
         environment = {
           PUID = "1000";  # We'll need to adjust this to match your homelab user
           PGID = "1000";  # Same here
@@ -244,6 +244,6 @@
     };
 
     # Don't forget to open the port in the firewall
-    # networking.firewall.allowedTCPPorts = [ 3151 ];
+    # networking.firewall.allowedTCPPorts = [ 3150 ];
   };
 }
